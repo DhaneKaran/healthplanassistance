@@ -1,0 +1,191 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(PATIENT)
+  createdAt DateTime @default(now())
+  phone     String?  // Added phone field
+  dob       DateTime? // Added dob field
+  address   String?  // Added address field
+  resetToken String?    // For password reset
+  resetTokenExpiry DateTime? // For password reset expiry
+  appointments Appointment[]
+  bills Bill[]
+  orders Order[]
+  
+  // Profile relationships
+  patientProfile     PatientProfile?
+  doctorProfile      DoctorProfile?
+  pharmacistProfile  PharmacistProfile?
+}
+
+enum Role {
+  PATIENT
+  DOCTOR
+  PHARMACIST
+  EMPLOYEE
+  ADMIN
+}
+
+model PatientProfile {
+  id              Int       @id @default(autoincrement())
+  userId          Int       @unique
+  user            User      @relation(fields: [userId], references: [id])
+  dateOfBirth     DateTime
+  gender          String
+  bloodGroup      String?
+  medicalHistory  String?
+  insurancePlan   String?
+  abhaCard        String?
+  documents       Json?     // Store document URLs
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model DoctorProfile {
+  id             Int       @id @default(autoincrement())
+  userId         Int       @unique
+  user           User      @relation(fields: [userId], references: [id])
+  specialization String
+  qualifications String
+  experience     Int
+  licenseNumber  String
+  documents      Json?     // Store document URLs
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model PharmacistProfile {
+  id            Int       @id @default(autoincrement())
+  userId        Int       @unique
+  user          User      @relation(fields: [userId], references: [id])
+  pharmacyName  String
+  qualifications String
+  experience    Int
+  licenseNumber String
+  documents     Json?     // Store document URLs
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model Doctor {
+  id              Int      @id @default(autoincrement())
+  name            String
+  specialization  String
+  description     String
+  experience      Int
+  qualifications  String
+  hospitalId      Int
+  hospital        Hospital @relation(fields: [hospitalId], references: [id])
+  appointments    Appointment[]
+  availability    Json?    // Store availability schedule
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Hospital {
+  id        Int      @id @default(autoincrement())
+  name      String
+  address   String
+  contact   String
+  doctors   Doctor[]
+  appointments Appointment[]
+}
+
+model Appointment {
+  id         Int      @id @default(autoincrement())
+  patient    User     @relation(fields: [patientId], references: [id])
+  patientId  Int
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  hospitalId Int
+  doctor     Doctor   @relation(fields: [doctorId], references: [id])
+  doctorId   Int
+  date       DateTime
+  time       String   // Store time as string (e.g., "10:00", "14:30")
+  status     String   @default("BOOKED") // BOOKED, CONFIRMED, COMPLETED, CANCELLED
+  medicalHistory String? // Patient's medical history for this appointment
+  symptoms   String?  // Patient's symptoms
+  paymentStatus String @default("PENDING") // PENDING, PAID
+  amount     Float    @default(20.0) // Appointment fee
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  bills      Bill[]
+}
+
+model Bill {
+  id           Int         @id @default(autoincrement())
+  appointment  Appointment? @relation(fields: [appointmentId], references: [id])
+  appointmentId Int?
+  order        Order?      @relation(fields: [orderId], references: [id])
+  orderId      Int?
+  patient      User        @relation(fields: [patientId], references: [id])
+  patientId    Int
+  amount       Float
+  type         String      @default("HOSPITAL") // HOSPITAL, MEDICINE
+  description  String      // Description of the bill
+  status       String      @default("UNPAID")
+  paidAt       DateTime?
+  payments     Payment[]
+  createdAt    DateTime    @default(now())
+}
+
+model Medicine {
+  id           Int      @id @default(autoincrement())
+  name         String
+  use          String   // Medical use/indication
+  dosageForm   String   // Dosage form and strength
+  manufacturer String   @default("Generic")
+  price        Float
+  stock        Int      @default(0)
+  category     String   @default("General")
+  prescription Boolean  @default(false) // Whether prescription is required
+  orders       Order[]
+}
+
+model Order {
+  id         Int      @id @default(autoincrement())
+  patient    User     @relation(fields: [patientId], references: [id])
+  patientId  Int
+  medicine   Medicine @relation(fields: [medicineId], references: [id])
+  medicineId Int
+  quantity   Int
+  totalAmount Float
+  paymentMethod String @default("CASH_ON_DELIVERY") // CASH_ON_DELIVERY, UPI
+  paymentStatus String @default("PENDING") // PENDING, PAID, FAILED
+  status     String   @default("PLACED") // PLACED, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+  bills      Bill[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Payment {
+  id              Int      @id @default(autoincrement())
+  bill            Bill     @relation(fields: [billId], references: [id])
+  billId          Int
+  amount          Float
+  paymentMethod   String   // CASH_ON_DELIVERY, UPI, CARD, NET_BANKING
+  gateway         String   // razorpay, stripe, paytm, etc.
+  status          String   @default("PENDING") // PENDING, SUCCESS, FAILED, CANCELLED
+  transactionId   String   @unique
+  customerDetails Json?    // Store customer details
+  gatewayResponse Json?    // Store gateway response
+  paidAt          DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}

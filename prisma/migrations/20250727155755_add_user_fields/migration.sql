@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "address" TEXT;
+ALTER TABLE "User" ADD COLUMN "dob" DATETIME;
+ALTER TABLE "User" ADD COLUMN "phone" TEXT;
