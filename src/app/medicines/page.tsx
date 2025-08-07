@@ -41,10 +41,15 @@ export default function MedicinesPage() {
 
   const fetchMedicines = async () => {
     try {
+      console.log('Fetching medicines...')
       const response = await fetch('/api/medicines')
+      console.log('Response status:', response.status)
       if (response.ok) {
         const data = await response.json()
+        console.log('Medicines data:', data)
         setMedicines(data)
+      } else {
+        console.error('Response not ok:', response.status, response.statusText)
       }
     } catch (error) {
       console.error('Error fetching medicines:', error)
