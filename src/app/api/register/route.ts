@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
-// Force dynamic rendering
-export const dynamic = 'force-dynamic';
-
 export async function POST(request: Request) {
   try {
     const { name, email, password, phone, dob, address, role } = await request.json()
